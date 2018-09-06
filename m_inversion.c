@@ -6,6 +6,11 @@
 extern void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
 extern void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
 
+/* Maps an matrix to an array. Where tam is the dimension in i direction
+ * following the C notation standard. Do not work with this guy thinking in
+ * Fortran cache efficiency. If so, your code will work fast, but it will be
+ * wrong. */
+
 int ind2d(int i, int j, int tam){
     return (i)*(tam)+j; 
     
@@ -28,16 +33,16 @@ void inv(double * A, int N)
 int main(){
 
     double A [2*2] = {
-        1,2,
-        3,4
+        1.0,2.0,
+        3.0,4.0
     };
 
     inv(A, 2);
 
     printf("\nOriginal Inversion results\n");
 
-    printf("%f %f\n", A[0], A[1]);
-    printf("%f %f\n", A[2], A[3]);
+    printf("%lf %lf\n", A[0], A[1]);
+    printf("%lf %lf\n", A[2], A[3]);
 
     A[0] = 0.0, A[1] = 0.0;
     A[2] = 0.0, A[3] = 0.0;
@@ -57,8 +62,8 @@ int main(){
 
     inv(A, 2);
 
-    printf("%f %f\n", A[0], A[1]);
-    printf("%f %f\n", A[2], A[3]);
+    printf("%lf %lf\n", A[0], A[1]);
+    printf("%lf %lf\n", A[2], A[3]);
 
     return 0;
 }
