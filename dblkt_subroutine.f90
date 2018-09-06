@@ -83,13 +83,13 @@ end program testando
 
 subroutine  blktriad(maind,lower,upper,id,md,xb,x)
 
-     !|     B(1)    C(1)             | | xb(1)  |
-     !| A(2)  B(2)    C(2)           | |        |
-     !|   A(3)  B(3)                 | |        |
-     !|     .     .                  |*|        | = B[1:mb*3]
-     !|       .     .                | |        |
-     !|               .       C(mb-1)| |        |
-     !|         A(mb)  B(mb)         | |xb(n*id)|
+     !|     B(1)    C(1)             | | x(1)  |
+     !| A(2)  B(2)    C(2)           | |       |
+     !|   A(3)  B(3)                 | |       |
+     !|     .     .                  |*|       | = xb[1:mb*3]
+     !|       .     .                | |       |
+     !|               .       C(mb-1)| |       |
+     !|         A(mb)  B(mb)         | |x(n*id)|
 
     ! id = inner matrices dimension.
     ! md = number matrices.
