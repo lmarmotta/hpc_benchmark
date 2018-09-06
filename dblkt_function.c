@@ -22,19 +22,30 @@ void inv(double * A, int N)
     free(WORK);
 }
 
+double ** alloc_double_matrix(int imax, int jmax){
+
+    double ** matrix = NULL;
+
+    matrix = (double**)calloc(imax, sizeof(double*));
+
+    if (matrix == NULL) {
+        printf("ERROR: Memory Allocation\n"); exit(1); 
+    }
+
+    for (int i = 0; i<imax; i++){
+
+        matrix[i] = (double*)calloc(jmax, sizeof(double));
+
+        if (matrix[i] == NULL) {
+            printf("ERROR: Memory Allocation\n"); exit(1); 
+        }
+    }
+
+    return matrix;
+}
 
 void blk_tri(double *** lower, double *** main, double *** upper, int size_m, int num_m, double ** XB, double *X){
 
-}
-
-/* Multiply two double squared matrices. */
-
-void dsmm(double ** mA, double ** mB, double ** mC, int size){
-
-    for (i=0; i<size; i++)
-        for (j=0; j<size; j++) 
-            for (k=0; k<size; k++)
-                *mC[i][j] = mC[i][j] + mA[i][k]*mB[k][j];
 }
 
 int main(){
