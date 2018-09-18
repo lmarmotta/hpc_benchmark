@@ -4,8 +4,6 @@
 /* gcc -O0 -ggdb -Wall -std=c99 -Ddgetrf=dgetrf_ -Ddgetri=dgetri_ dblkt_function.c -lblas -llapack */
 
 /* To do...
- * [ ] - Make an cube allocator.
- * [ ] - Test the argument passing before implementation.
  * [ ] - Copy solver function. */
 
 extern void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
@@ -15,15 +13,25 @@ int ind2d(int i, int j, int tam){
     return (i)*(tam)+j; 
 }
 
-void inv(double * A, int N)
+void inv(double ** matrix, int N)
 {
     int * IPIV = calloc((N+1),sizeof(int));
     int LWORK = N*N;
     double * WORK = calloc(LWORK,sizeof(double));
     int INFO;
 
+    double A[N*N];
+
+    for (int i = 0; i<N; i++)
+        for (int j = 0; j<N; j++)
+            A[(i)*(N)+j] = matrix[i][j];
+
     dgetrf_(&N,&N,A,&N,IPIV,&INFO);
     dgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
+
+    for (int i = 0; i<N; i++)
+        for (int j = 0; j<N; j++)
+            matrix[i][j] = A[(i)*(N)+j];
 
     free(IPIV);
     free(WORK);
@@ -150,21 +158,9 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
     for (int i = 0; i<size_m; i++)
         for (int j = 0; j<size_m; j++) aux_copy[i][j] = main[i][j][0];
 
-    /* Prepare matrix inversion. */
-
-    double * mv = alloc_dvector(size_m*size_m);
-
-    for (int i = 0; i<size_m; i++)
-        for (int j = 0; j<size_m; j++)
-            mv[ind2d(i,j,size_m)] = aux_copy[i][j];
-
     /* Invert matrix. */
             
-    inv(mv, size_m);
-
-    for (int i = 0; i<size_m; i++)
-        for (int j = 0; j<size_m; j++)
-            aux_copy[i][j] = mv[ind2d(i,j,size_m)]; 
+    inv(aux_copy, size_m);
 
     double ** auxm1 = alloc_dmatrix(size_m,size_m);
     double ** auxm2 = alloc_dmatrix(size_m,size_m);
@@ -189,6 +185,13 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
 
     free_dmatrix(auxm2,size_m,size_m);
 
+    /* Get the rest of the gammas. */
+
+    for (int m = 1; m<num_m-1; m++){
+
+    }
+
+
     /* Avoid leaks baby. */
 
     free_dcube(gamm,size_m,size_m,num_m);
@@ -196,7 +199,6 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
     free_dmatrix(beta,size_m,num_m);
 
     free_dmatrix(aux_copy,size_m,size_m);
-
 
 }
 
