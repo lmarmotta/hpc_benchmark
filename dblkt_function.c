@@ -1,6 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+/* gcc -O0 -ggdb -Wall -std=c99 -Ddgetrf=dgetrf_ -Ddgetri=dgetri_ dblkt_function.c -lblas -llapack */
+
+/* To do...
+ * [ ] - Make an cube allocator.
+ * [ ] - Test the argument passing before implementation.
+ * [ ] - Copy solver function. */
+
 extern void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
 extern void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
 
@@ -22,38 +29,131 @@ void inv(double * A, int N)
     free(WORK);
 }
 
-double ** alloc_double_matrix(int imax, int jmax){
+/* Alloc a double cube. */
 
-    double ** matrix = NULL;
+double *** alloc_dcube(int imax, int jmax, int kmax){
 
-    matrix = (double**)calloc(imax, sizeof(double*));
+    double *** out = NULL;
 
-    if (matrix == NULL) {
-        printf("ERROR: Memory Allocation\n"); exit(1); 
-    }
+    /* Allocate the first line. */
+
+    out = (double***)calloc(imax,sizeof(double**));
+
+    /* Check the allocation pointer position. */
+
+    if (out == NULL) {printf("ERROR: double matrix allocation.\n"); exit(1);}
+
+    /* Allocate the matrix. */
 
     for (int i = 0; i<imax; i++){
+        out[i] = (double**)calloc(jmax,sizeof(double*));
+        if (out[i] == NULL) {printf("ERROR: double matrix allocation.\n"); exit(1);}
+    }
 
-        matrix[i] = (double*)calloc(jmax, sizeof(double));
+    /* Allocate the block. */
 
-        if (matrix[i] == NULL) {
-            printf("ERROR: Memory Allocation\n"); exit(1); 
+    for (int i = 0; i<imax; i++){
+        for (int j = 0; j<jmax; j++){
+            out[i][j] = (double*)calloc(kmax,sizeof(double));
+            if (out[i][j] == NULL) {printf("ERROR: double matrix allocation.\n"); exit(1);}
         }
     }
 
-    return matrix;
+    /* Initialize the cube. */
+
+    for (int i = 0; i<imax; i++)
+        for (int j = 0; j<jmax; j++) 
+            for (int k = 0; k<kmax; k++) out[i][j][k] = 0.0;
+
+    return out;
 }
 
-void blk_tri(double *** lower, double *** main, double *** upper, int size_m, int num_m, double ** XB, double *X){
+/* Allocate a double matrix. */
+
+double ** alloc_dmatrix(int imax, int jmax){
+
+    double ** out = NULL;
+
+    out = (double**)calloc(imax,sizeof(double));
+
+    if (out == NULL) {printf("ERROR: double matrix allocation.\n"); exit(1);}
+
+    for (int i = 0; i<imax; i++){
+        out[i] = (double*)calloc(jmax,sizeof(double));
+        if (out[i] == NULL) {printf("ERROR: double matrix allocation.\n"); exit(1);}
+    }
+
+    /* Initialize the matrix. */
+
+    for (int i = 0; i<imax; i++)
+        for (int j = 0; j<jmax; j++) out[i][j] = 0.0;
+
+    return out;
+}
+
+void free_dmatrix(double ** matrix, int imax, int jmax){
+
+    for (int i = 0; i<imax; i++)
+        free(matrix[i]);
+
+    free(matrix);
+}
+
+void free_dcube(double *** cube, int imax, int jmax, int kmax){
+
+    for (int i = 0; i<imax; i++)
+        for (int j = 0; j<jmax; j++) free(cube[i][j]);
+            
+    for (int i = 0; i<imax; i++) free(cube[i]);
+
+    free(cube);
+
+}
+
+void blk_tri(double *** lower, double *** main, double *** upper, int size_m, int num_m, double ** XB, double **X){
+
+    /* Fill the test matrices. */
+
+    for (int i = 0; i<3; i++){
+
+        /* Fill the lower diagonal. */
+
+        printf("-- ld: %lf\n", lower[0][0][i]);
+        printf("-- ld: %lf\n", lower[0][1][i]);
+        printf("-- ld: %lf\n", lower[1][0][i]);
+        printf("-- ld: %lf\n", lower[1][1][i]);
+
+        /* Fill the main matrix. */
+
+        printf("-- lm: %lf\n", main[0][0][i]);
+        printf("-- lm: %lf\n", main[0][1][i]);
+        printf("-- lm: %lf\n", main[1][0][i]);
+        printf("-- lm: %lf\n", main[1][1][i]);
+
+        /* Fill the upper matrix. */
+
+        printf("-- lu: %lf\n", upper[0][0][i]);
+        printf("-- lu: %lf\n", upper[0][1][i]);
+        printf("-- lu: %lf\n", upper[1][0][i]);
+        printf("-- lu: %lf\n", upper[1][1][i]);
+
+    }
+
+    /* Fill the solution vector. */
+
+    for (int i = 0; i<2; i++)
+        for (int j = 0; j<2; j++)
+            printf("-- xb: %lf\n",XB[i][j]);
 
 }
 
 int main(){
 
-    double ld[2][2][3];
-    double lm[2][2][3];
-    double lu[2][2][3];
-    double xb[2][3];
+    double *** ld = alloc_dcube(2,2,3);
+    double *** lm = alloc_dcube(2,2,3);
+    double *** lu = alloc_dcube(2,2,3);
+    double **  xb = alloc_dmatrix(2,3);
+    double **  x  = alloc_dmatrix(2,3);
 
     /* Fill the test matrices. */
 
@@ -75,10 +175,10 @@ int main(){
 
         /* Fill the upper matrix. */
 
-        lm[0][0][i] = 16.0;
-        lm[0][1][i] = 9.0;
-        lm[1][0][i] = 9.0;
-        lm[1][1][i] = 6.0;
+        lu[0][0][i] = 16.0;
+        lu[0][1][i] = 9.0;
+        lu[1][0][i] = 9.0;
+        lu[1][1][i] = 6.0;
 
     }
 
@@ -87,6 +187,16 @@ int main(){
     for (int i = 0; i<2; i++)
         for (int j = 0; j<2; j++)
             xb[i][j] = 3.0;
+
+    /* Solve the system. */
+
+    blk_tri(ld, lm, lu, 4, 3, xb, x);
+
+    free_dcube(ld,2,2,3);
+    free_dcube(lm,2,2,3);
+    free_dcube(lu,2,2,3);
+    free_dmatrix(xb,2,3);
+    free_dmatrix(x,2,3);
 
     return 0;
 }

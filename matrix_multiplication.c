@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-
 /* Multiply two double squared matrices. */
 
 void dsmm(double ** mA, double ** mB, double ** mC, int size){
@@ -33,6 +32,8 @@ void dmm(double ** mA, double ** mB, double ** mC, int m, int n, int p){
 int main(){
 
     int size = 2;
+
+    printf("Testing the square size matrix multiplication.\n");
 
     double ** A = (double**)calloc(size,sizeof(double*));
     for (int i = 0; i<size; i++) A[i] = (double*)calloc(size,sizeof(double));
