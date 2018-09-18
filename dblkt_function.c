@@ -29,6 +29,32 @@ void inv(double * A, int N)
     free(WORK);
 }
 
+/* Square matrix multiplication. */
+
+void dsmm(double ** mA, double ** mB, double ** mC, int size){
+
+    for (int i=0; i<size; i++)
+        for (int j=0; j<size; j++) mC[i][j] = 0.0;
+
+    for (int i=0; i<size; i++)
+        for (int j=0; j<size; j++) 
+            for (int k=0; k<size; k++)
+                mC[i][j] = mC[i][j] + mA[i][k]*mB[k][j];
+}
+
+/* Alloc double vector. */
+
+double * alloc_dvector(int imax){
+
+    double * out = NULL;
+
+    out = (double*)calloc(imax,sizeof(double));
+
+    if (out == NULL) {printf("ERROR: double matrix allocation.\n"); exit(1);}
+
+    return out;
+}
+
 /* Alloc a double cube. */
 
 double *** alloc_dcube(int imax, int jmax, int kmax){
@@ -46,13 +72,12 @@ double *** alloc_dcube(int imax, int jmax, int kmax){
     /* Allocate the matrix. */
 
     for (int i = 0; i<imax; i++){
+
         out[i] = (double**)calloc(jmax,sizeof(double*));
         if (out[i] == NULL) {printf("ERROR: double matrix allocation.\n"); exit(1);}
-    }
 
-    /* Allocate the block. */
+        /* Allocate the block. */
 
-    for (int i = 0; i<imax; i++){
         for (int j = 0; j<jmax; j++){
             out[i][j] = (double*)calloc(kmax,sizeof(double));
             if (out[i][j] == NULL) {printf("ERROR: double matrix allocation.\n"); exit(1);}
@@ -112,38 +137,66 @@ void free_dcube(double *** cube, int imax, int jmax, int kmax){
 
 void blk_tri(double *** lower, double *** main, double *** upper, int size_m, int num_m, double ** XB, double **X){
 
-    /* Fill the test matrices. */
+    /* Define auxiliar variables. */
 
-    for (int i = 0; i<3; i++){
+    double *** gamm = alloc_dcube(size_m,size_m,num_m);
 
-        /* Fill the lower diagonal. */
+    double **  beta = alloc_dmatrix(size_m,num_m);
 
-        printf("-- ld: %lf\n", lower[0][0][i]);
-        printf("-- ld: %lf\n", lower[0][1][i]);
-        printf("-- ld: %lf\n", lower[1][0][i]);
-        printf("-- ld: %lf\n", lower[1][1][i]);
+    double ** aux_copy = alloc_dmatrix(size_m,size_m);
 
-        /* Fill the main matrix. */
+    /* Get the first gamma. */
 
-        printf("-- lm: %lf\n", main[0][0][i]);
-        printf("-- lm: %lf\n", main[0][1][i]);
-        printf("-- lm: %lf\n", main[1][0][i]);
-        printf("-- lm: %lf\n", main[1][1][i]);
+    for (int i = 0; i<size_m; i++)
+        for (int j = 0; j<size_m; j++) aux_copy[i][j] = main[i][j][0];
 
-        /* Fill the upper matrix. */
+    /* Prepare matrix inversion. */
 
-        printf("-- lu: %lf\n", upper[0][0][i]);
-        printf("-- lu: %lf\n", upper[0][1][i]);
-        printf("-- lu: %lf\n", upper[1][0][i]);
-        printf("-- lu: %lf\n", upper[1][1][i]);
+    double * mv = alloc_dvector(size_m*size_m);
 
-    }
+    for (int i = 0; i<size_m; i++)
+        for (int j = 0; j<size_m; j++)
+            mv[ind2d(i,j,size_m)] = aux_copy[i][j];
 
-    /* Fill the solution vector. */
+    /* Invert matrix. */
+            
+    inv(mv, size_m);
 
-    for (int i = 0; i<2; i++)
-        for (int j = 0; j<2; j++)
-            printf("-- xb: %lf\n",XB[i][j]);
+    for (int i = 0; i<size_m; i++)
+        for (int j = 0; j<size_m; j++)
+            aux_copy[i][j] = mv[ind2d(i,j,size_m)]; 
+
+    double ** auxm1 = alloc_dmatrix(size_m,size_m);
+    double ** auxm2 = alloc_dmatrix(size_m,size_m);
+
+    for (int i = 0; i<size_m; i++)
+        for (int j = 0; j<size_m; j++)
+            auxm1[i][j] = upper[i][j][0];
+
+    /* Multiply to obtain the first gamma. */
+
+    dsmm(aux_copy, auxm1, auxm2, size_m);
+
+    /* Get the gamma, aleluia !! */
+
+    for (int i = 0; i<size_m; i++)
+        for (int j = 0; j<size_m; j++)
+            gamm[i][j][0] = auxm2[i][j];
+
+    /* No leaks in my programs mtf ! */
+
+    free_dmatrix(auxm1,size_m,size_m);
+
+    free_dmatrix(auxm2,size_m,size_m);
+
+    /* Avoid leaks baby. */
+
+    free_dcube(gamm,size_m,size_m,num_m);
+
+    free_dmatrix(beta,size_m,num_m);
+
+    free_dmatrix(aux_copy,size_m,size_m);
+
 
 }
 
@@ -190,7 +243,9 @@ int main(){
 
     /* Solve the system. */
 
-    blk_tri(ld, lm, lu, 4, 3, xb, x);
+    printf("RUN: Entering sys solve\n");
+    blk_tri(ld, lm, lu, 2, 3, xb, x);
+    printf("SUCCESS: sys solve\n");
 
     free_dcube(ld,2,2,3);
     free_dcube(lm,2,2,3);
