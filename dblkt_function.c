@@ -9,6 +9,18 @@
 extern void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
 extern void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
 
+void dmcpy(double ** mA, double ** mB, int size){
+    for (int i = 0; i<size; i++)
+        for (int j = 0; j<size; j++)
+            mA[i][j] = mB[i][j];
+}
+
+void dmadd(double ** mA, double ** mB, double ** mC, int size){
+    for (int i = 0; i<size; i++)
+        for (int j = 0; j<size; j++)
+            mC[i][j] = mA[i][j] + mB[i][j];
+}
+
 int ind2d(int i, int j, int tam){
     return (i)*(tam)+j; 
 }
@@ -37,9 +49,24 @@ void inv(double ** matrix, int N)
     free(WORK);
 }
 
+/* Matrix multiplication any size. Remember what I always forget:
+ * [m x n] X [n x p] = [m x p] Where [a,b] are lines and columns. 
+ *    A    x    B    =    C */ 
+
+void dmgss(double ** mA, double ** mB, double ** mC, int m, int n, int p){
+
+    for (int i=0; i<m; i++)
+        for (int j=0; j<p; j++) mC[i][j] = 0.0;
+
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < p; j++)
+            for (int k = 0; k < n; k++)
+                mC[i][j] = mC[i][j] + mA[i][k]*mB[k][j];
+}
+
 /* Square matrix multiplication. */
 
-void dsmm(double ** mA, double ** mB, double ** mC, int size){
+void dmuls(double ** mA, double ** mB, double ** mC, int size){
 
     for (int i=0; i<size; i++)
         for (int j=0; j<size; j++) mC[i][j] = 0.0;
@@ -171,7 +198,7 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
 
     /* Multiply to obtain the first gamma. */
 
-    dsmm(aux_copy, auxm1, auxm2, size_m);
+     dmuls(aux_copy, auxm1, auxm2, size_m);
 
     /* Get the gamma, aleluia !! */
 
@@ -179,18 +206,54 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
         for (int j = 0; j<size_m; j++)
             gamm[i][j][0] = auxm2[i][j];
 
-    /* No leaks in my programs mtf ! */
-
-    free_dmatrix(auxm1,size_m,size_m);
-
-    free_dmatrix(auxm2,size_m,size_m);
-
     /* Get the rest of the gammas. */
+
+    double ** aux_mult = alloc_dmatrix(size_m,size_m);
+    double ** aux_summ = alloc_dmatrix(size_m,size_m);
 
     for (int m = 1; m<num_m-1; m++){
 
+        for (int i = 0; i<size_m; i++){
+            for (int j = 0; j<size_m; j++){ 
+                auxm1[i][j] = lower[i][j][m];
+                auxm2[i][j] = gamm[i][j][m-1];
+            }
+        }
+
+        dmuls(auxm1, auxm2, aux_mult, size_m);
+
+        for (int i = 0; i<size_m; i++){
+            for (int j = 0; j<size_m; j++){
+                aux_summ[i][j] = main[i][j][m] - aux_mult[i][j];
+            }
+        }
+
+        inv(aux_summ, size_m);
+
+        for (int i = 0; i<size_m; i++){
+            for (int j = 0; j<size_m; j++){ 
+                auxm1[i][j] = upper[i][j][m];
+            }
+        }
+
+        dmuls(aux_summ, auxm1, auxm2, size_m);
     }
 
+    /* Zero out our arrays. */
+
+    for (int i = 0; i<size_m; i++)
+        for (int j = 0; j<size_m; j++) aux_copy[i][j] = main[i][j][0];
+
+    inv(aux_copy,size_m);
+
+    double ** auxv1 = alloc_dmatrix(size_m,1);
+    double ** auxv2 = alloc_dmatrix(size_m,1);
+
+    for (int i = 0; i<size_m; i++) auxv1[i][0] = XB[i][0];
+
+    dmgss(aux_copy, auxv1, auxv2, size_m, size_m, 1);
+
+    for (int i = 0; i<size_m; i++) beta[i][0] = auxv2[i][0]; 
 
     /* Avoid leaks baby. */
 
@@ -200,6 +263,16 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
 
     free_dmatrix(aux_copy,size_m,size_m);
 
+    free_dmatrix(auxm1,size_m,size_m);
+
+    free_dmatrix(auxm2,size_m,size_m);
+
+    free_dmatrix(aux_mult,size_m,size_m);
+
+    free_dmatrix(aux_summ,size_m,size_m);
+
+    free_dmatrix(auxv1,size_m,1);
+    free_dmatrix(auxv2,size_m,1);
 }
 
 int main(){
@@ -248,6 +321,26 @@ int main(){
     printf("RUN: Entering sys solve\n");
     blk_tri(ld, lm, lu, 2, 3, xb, x);
     printf("SUCCESS: sys solve\n");
+
+    /* Print out hard coded and correct solution. */
+
+    printf("x(1) = 5.8571429\n");
+    printf("x(2) = -8.9220779\n");
+    printf("x(3) = 0.5714286\n");
+    printf("x(4) = -0.3116883\n");
+    printf("x(5) = 1.8571429\n");
+    printf("x(6) = -2.3766234\n");
+
+    printf("\n");
+    printf("Computed solution\n");
+    printf("\n");
+
+    for (int i = 0; i<2; i++){
+        for (int j = 0; j<3; j++){
+            printf("x(%d,%d) = %lf\n",i,j,x[i][j]);
+        }
+    }
+
 
     free_dcube(ld,2,2,3);
     free_dcube(lm,2,2,3);
