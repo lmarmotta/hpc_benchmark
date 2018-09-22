@@ -170,6 +170,10 @@ void free_dcube(double *** cube, int imax, int jmax, int kmax){
 
 }
 
+void free_vector(double * vector, int imax){
+    free(vector);
+}
+
 void blk_tri(double *** lower, double *** main, double *** upper, int size_m, int num_m, double ** XB, double ** X){
 
     /* Define auxiliar variables. */
@@ -346,6 +350,8 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
     free_dmatrix(auxv1,size_m,1);
 
     free_dmatrix(auxv2,size_m,1);
+
+    free_vector(aux_dumm,size_m);
 }
 
 int main(){
