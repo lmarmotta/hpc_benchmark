@@ -170,7 +170,7 @@ void free_dcube(double *** cube, int imax, int jmax, int kmax){
 
 }
 
-void blk_tri(double *** lower, double *** main, double *** upper, int size_m, int num_m, double ** XB, double **X){
+void blk_tri(double *** lower, double *** main, double *** upper, int size_m, int num_m, double ** XB, double ** X){
 
     /* Define auxiliar variables. */
 
@@ -253,7 +253,79 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
 
     dmgss(aux_copy, auxv1, auxv2, size_m, size_m, 1);
 
+    double * aux_dumm = alloc_dvector(size_m);
+
+    /* Form the first beta. */
+
     for (int i = 0; i<size_m; i++) beta[i][0] = auxv2[i][0]; 
+
+    /* Go and grab the rest. */
+
+    for (int m = 1; m<num_m; m++){
+
+        for (int i = 0; i<size_m; i++)
+            for (int j = 0; j<size_m; j++){
+                aux_mult[i][j] = 0.0;
+                aux_summ[i][j] = 0.0;
+        }
+
+        for (int i = 0; i<size_m; i++){
+            for (int j = 0; j<size_m; j++){ 
+                auxm1[i][j] = lower[i][j][m];
+                auxm2[i][j] = gamm[i][j][m-1];
+            }
+        }
+
+        dmuls(auxm1, auxm2, aux_mult, size_m);
+
+        for (int i = 0; i<size_m; i++){
+            for (int j = 0; j<size_m; j++){
+                aux_summ[i][j] = main[i][j][m] - aux_mult[i][j];
+            }
+        }
+
+        inv(aux_summ, size_m);
+
+        for (int i = 0; i<size_m; i++){
+            for (int j = 0; j<size_m; j++){
+                auxm1[i][j] = lower[i][j][m];
+            }
+        }
+
+        for (int i = 0; i<size_m; i++) auxv1[i][0] = beta[i][m-1];
+
+        dmgss(auxm1, auxv1, auxv2, size_m, size_m, 1);
+
+        for (int i = 0; i<size_m; i++)
+            aux_dumm[i] = XB[i][m] - auxv2[i][0];
+
+        for (int i = 0; i<size_m; i++) auxv1[i][0] = aux_dumm[i];
+
+        dmgss(aux_summ, auxv1, auxv2, size_m, size_m, 1);
+
+        for (int i = 0; i<size_m; i++) beta[i][m] = auxv2[i][0];
+
+    }
+
+    /* Start backward sweep. */
+
+    for (int i = 0; i<size_m; i++)
+        for (int j = 0; j<num_m; j++) X[i][j] = 0.0;
+
+    for (int i = 0; i<size_m; i++) X[i][num_m] = beta[i][num_m];
+
+    for (int m = num_m-1; m > 0; m--){
+
+        for (int i = 0; i<size_m; i++) 
+            for (int j = 0; j<size_m; j++) auxm1[i][j] = gamm[i][j][m];
+
+        for (int i = 0; i<size_m; i++) auxv1[i][0] = X[i][m+1];
+
+        dmgss(auxm1, auxv1, auxv2, size_m, size_m, 1);
+
+        for (int i = 0; i<size_m; i++) 
+            X[i][m] = beta[i][m] - auxv2[i][0];
+    }
 
     /* Avoid leaks baby. */
 
@@ -272,6 +344,7 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
     free_dmatrix(aux_summ,size_m,size_m);
 
     free_dmatrix(auxv1,size_m,1);
+
     free_dmatrix(auxv2,size_m,1);
 }
 
@@ -316,11 +389,15 @@ int main(){
         for (int j = 0; j<2; j++)
             xb[i][j] = 3.0;
 
-    /* Solve the system. */
+    /* Solve the system. Here I am repeating the solution in order to catch any memory leak. */
 
-    printf("RUN: Entering sys solve\n");
-    blk_tri(ld, lm, lu, 2, 3, xb, x);
-    printf("SUCCESS: sys solve\n");
+    int repeat = 10;
+
+    for (int r = 0; r<repeat; r++){
+        printf("RUN: Entering sys solve\n");
+        blk_tri(ld, lm, lu, 2, 3, xb, x);
+        printf("SUCCESS: sys solve\n");
+    }
 
     /* Print out hard coded and correct solution. */
 
