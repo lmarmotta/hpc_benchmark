@@ -241,6 +241,13 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
         }
 
         dmuls(aux_summ, auxm1, auxm2, size_m);
+
+        for (int i = 0; i<size_m; i++){
+            for (int j = 0; j<size_m; j++){ 
+                gamm[i][j][m] = auxm2[i][j];
+            }
+        }
+
     }
 
     /* Zero out our arrays. */
@@ -397,11 +404,11 @@ int main(){
 
     /* Solve the system. Here I am repeating the solution in order to catch any memory leak. */
 
-    int repeat = 10;
+    int repeat = 1;
 
     for (int r = 0; r<repeat; r++){
         printf("RUN: Entering sys solve\n");
-        blk_tri(ld, lm, lu, 2, 3, xb, x);
+        blk_tri(lm, ld, lu, 2, 3, xb, x);
         printf("SUCCESS: sys solve\n");
     }
 
