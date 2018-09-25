@@ -247,7 +247,6 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
                 gamm[i][j][m] = auxm2[i][j];
             }
         }
-
     }
 
     /* Zero out our arrays. */
@@ -323,9 +322,9 @@ void blk_tri(double *** lower, double *** main, double *** upper, int size_m, in
     for (int i = 0; i<size_m; i++)
         for (int j = 0; j<num_m; j++) X[i][j] = 0.0;
 
-    for (int i = 0; i<size_m; i++) X[i][num_m] = beta[i][num_m];
+    for (int i = 0; i<size_m; i++) X[i][num_m-1] = beta[i][num_m-1];
 
-    for (int m = num_m-1; m > 0; m--){
+    for (int m = num_m-2; m >= 0; m--){
 
         for (int i = 0; i<size_m; i++) 
             for (int j = 0; j<size_m; j++) auxm1[i][j] = gamm[i][j][m];
@@ -399,7 +398,7 @@ int main(){
     /* Fill the solution vector. */
 
     for (int i = 0; i<2; i++)
-        for (int j = 0; j<2; j++)
+        for (int j = 0; j<3; j++)
             xb[i][j] = 3.0;
 
     /* Solve the system. Here I am repeating the solution in order to catch any memory leak. */
@@ -425,8 +424,8 @@ int main(){
     printf("Computed solution\n");
     printf("\n");
 
-    for (int i = 0; i<2; i++){
-        for (int j = 0; j<3; j++){
+    for (int j = 0; j<3; j++){
+        for (int i = 0; i<2; i++){
             printf("x(%d,%d) = %lf\n",i,j,x[i][j]);
         }
     }
