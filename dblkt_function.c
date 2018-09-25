@@ -174,7 +174,7 @@ void free_vector(double * vector, int imax){
     free(vector);
 }
 
-void blk_tri(double *** lower, double *** main, double *** upper, int size_m, int num_m, double ** XB, double ** X){
+void blk_tri(double *** main, double *** lower, double *** upper, int size_m, int num_m, double ** XB, double ** X){
 
     /* Define auxiliar variables. */
 
@@ -407,7 +407,7 @@ int main(){
 
     for (int r = 0; r<repeat; r++){
         printf("RUN: Entering sys solve\n");
-        blk_tri(lm, ld, lu, 2, 3, xb, x);
+        blk_tri(ld, lm, lu, 2, 3, xb, x);
         printf("SUCCESS: sys solve\n");
     }
 
