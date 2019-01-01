@@ -22,7 +22,7 @@ e   = e
 
 # Pressure is a function of the primitives dumb ass !
 
-p = (g - 1.0)*(e - 0.5*rho*(u**2.0))
+p = (g - 1.0)*(e - 0.5*rho*(u**2.0 + v**2.0))
 
 # Define the vectors.
 
