@@ -1,12 +1,12 @@
 #!/usr/bin/bash
 
-CC=/usr/bin/mpicc
-FC=/usr/bin/mpif90
-CXX=/usr/bin/mpicxx
+export CC=/usr/bin/mpicc
+export FC=/usr/bin/mpif90
+export CXX=/usr/bin/mpicxx
 
 # HDF5 compiled with fortran and parallel support.
 # FC=/usr/bin/mpif90 CC=/usr/bin/mpicc CXX=/usr/bin/mpicxx ./configure --prefix=/home/leonardo/opt/hdf5/ --enable-parallel --enable-fortran --enable-cxx --enable-unsupported
-HDF5_DIR=/home/leonardo/opt/hdf5
+export HDF5_DIR=/home/leonardo/opt/hdf5
 
 # The CGNS library compiled in my home opt folder is not working with the linker.
 
